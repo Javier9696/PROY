@@ -1,4 +1,3 @@
-# -- Borrar todos los elementos del environment
 rm(list=ls())
 mdir <- getwd()
 
@@ -58,10 +57,79 @@ Datos$TimeStamp <- as.character(Datos$TimeStamp)
 
 
 Datos$TimeStamp <- as.Date(Datos$TimeStamp)
+
+#Patrones CandleSticks
+aux <-data.frame("Date" = Datos[,1],
+                 "Precio_Apertura" = Datos$Open,
+                 "Precio_Cierre" = Datos$Close,
+                 "Bull_Bear" = NA , 
+                 "Amplitud" = 0,
+                 "Pattern" = NA)
+aux$Bull_Bear[1] <- "Bull"
+aux$Amplitud[1] <- abs(aux$Precio_Cierre[1] - aux$Precio_Apertura[1])
+
+
+for (i in 2:length(Datos$Open)){
+  #condicion 1
+  if(aux$Precio_Apertura[i] > aux$Precio_Cierre[i]){
+    aux$Bull_Bear[i] <- "Bear"
+    aux$Amplitud[i] <- abs(aux$Precio_Cierre[i] - aux$Precio_Apertura[i])
+    
+  } else {
+    aux$Bull_Bear[i] <- "Bull"
+    aux$Amplitud[i] <- abs(aux$Precio_Cierre[i] - aux$Precio_Apertura[i])
+    
+  } #fin if
+  #condicion 2
+  if( aux$Amplitud[i-1] < aux$Amplitud[i]){
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bear") {
+      aux$Pattern[i] <- "Bearish Engulfing" 
+      
+    }
+    else if (aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull"){
+      aux$Pattern[i] <- "Bullish Engulfing" 
+    }
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bull") {
+      aux$Pattern[i] <- "Bullish"
+      
+    }
+    else if (aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bear"){
+      aux$Pattern[i] <- "Bearish"
+    }
+  }
+  
+  else if(aux$Amplitud[i-1] > aux$Amplitud[i]){
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bear") {
+      aux$Pattern[i] <- "Bearish Harami" 
+      
+    }
+    else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull") {
+      #else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull")  {
+      aux$Pattern[i] <- "Bullish Harami" 
+    }
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bull") {
+      aux$Pattern[i] <- "Bullish"
+      
+    }
+    else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bear") {
+      
+      aux$Pattern[i] <- "Bearish"
+    }
+    
+  }
+  
+}  # fin for
+
+
+
+
+#Grafica EMA Y BBBands
+
 Historico <- data.frame("Date"= Datos[,1],
                         "Precio"= Datos[,5])
 X <- EMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
 y <- BBands(Historico[,2], n=10, EMA, sd=2)
+
 
 
 Historico <- data.frame("Date"= Datos[,1],
