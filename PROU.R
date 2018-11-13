@@ -130,13 +130,15 @@ Historico <- data.frame("Date"= Datos[,1],
 X <- EMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
 y <- BBands(Historico[,2], n=10, EMA, sd=2)
 
-
-
 Historico <- data.frame("Date"= Datos[,1],
                         "Precio"= Datos[,5],
                         "EMA"= X,
                         "BBd"= y[,1],
-                        "BBu"=y[,3])
+                        "BBu"=y[,3],
+                        "Open" = Datos$Open,
+                        "Close" = Datos$Close,
+                        "High" = Datos$High,
+                        "Low" = Datos$Low)
 
 
 plot_ly(Historico) %>%
@@ -162,3 +164,12 @@ plot_ly(Historico) %>%
          yaxis = list(title = "Precios"), 
          
          legend = list(orientation = 'h', y = -0.25, x = -0.25))
+
+#grafica candleStick 
+
+plot_ly(x =Historico$Date, open =Historico$Open, high = Historico$High, low = Historico$Low, close = Historico$Close, type = "candlestick")%>%
+  layout(title = "Gráfica de barras USD/MXN",
+         
+         xaxis = list(title = "Fechas", showgrid = T),
+         
+         yaxis = list(title = "Precios"))
