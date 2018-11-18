@@ -1,0 +1,406 @@
+
+\documentclass[final, xcolor=table]{beamer}
+%\usetheme{myst}
+
+\usepackage{wrapfig}
+\usepackage{lmodern}
+
+\usepackage[utf8]{inputenc} %unicode support
+\usepackage[T1]{fontenc}
+
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[orientation=portrait,size=a0,scale=1.4]{beamerposter}
+\usepackage{graphicx}
+\usepackage{booktabs  }
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amsthm,amssymb,latexsym}
+\usepackage{booktabs}
+\usepackage{ragged2e}
+\graphicspath{{figures/}}
+
+<<Ini, include=FALSE, echo=FALSE, eval=TRUE>>=
+rm(list=ls())
+mdir <- getwd()
+
+# -- Establecer el sistema de medicion de la computadora
+Sys.setlocale(category = "LC_ALL", locale = "")
+
+# -- Huso horario
+Sys.setenv(tz="America/Monterrey", TZ="America/Monterrey")
+options(tz="America/Monterrey", TZ="America/Monterrey")
+
+# -- Cargar y/o instalar en automatico paquetes a utilizar -- #
+
+pkg <- c("base","downloader","dplyr","fBasics","forecast","grid",
+         "gridExtra","httr","jsonlite","lmtest","lubridate","moments",
+         "matrixStats", "PerformanceAnalytics","plyr","quantmod",
+         "reshape2","RCurl","RMySQL", "stats","scales","tseries",
+         "TTR","TSA","XML","xts","zoo")
+
+inst <- pkg %in% installed.packages()
+if(length(pkg[!inst]) > 0) install.packages(pkg[!inst])
+instpackages <- lapply(pkg, library, character.only=TRUE)
+
+# -- Cargar archivos desde GitHub -- #
+
+RawGitHub <- "https://raw.githubusercontent.com/IFFranciscoME/"
+ROandaAPI <- paste(RawGitHub,"ROandaAPI/master/ROandaAPI.R",sep="")
+downloader::source_url(ROandaAPI,prompt=FALSE,quiet=TRUE)
+
+# -- Parametros para usar API-OANDA
+
+# Tipo de cuenta practice/live
+OA_At <- "practice"
+# ID de cuenta
+OA_Ai <- 1742531
+# Token para llamadas a API
+OA_Ak <- "ada4a61b0d5bc0e5939365e01450b614-4121f84f01ad78942c46fc3ac777baa6" 
+# Hora a la que se considera "Fin del dia"
+OA_Da <- 17
+# Uso horario
+OA_Ta <- "America/Mexico_City"
+# Instrumento
+OA_In <- "USD_MXN"
+# Granularidad o periodicidad de los precios H4 = Cada 4 horas
+OA_Pr <- "H4"
+# Multiplicador de precios para convertir a PIPS
+MultPip_MT1 <- 10000
+
+Precios_Oanda <- HisPrices(AccountType = OA_At, Granularity = OA_Pr,
+                           DayAlign = OA_Da, TimeAlign = OA_Ta, Token = OA_Ak,
+                           Instrument = OA_In, 
+                           Start = NULL, End = NULL, Count = 500)
+suppressMessages(library(plotly)) # Graficas interactivas
+suppressMessages(library(quantmod)) # Graficas interactivas
+Datos <- list()
+Datos <- Precios_Oanda
+suppressMessages(library(TTR)) # ANALISIS TEC
+Datos$TimeStamp <- as.character(Datos$TimeStamp)
+
+
+Datos$TimeStamp <- as.Date(Datos$TimeStamp)
+Historico <- data.frame("Date"= Datos[,1],
+                        "Precioopen"= Datos[,2],
+                        "Preciohigh"= Datos[,3],
+                        "Preciolow"= Datos[,4],
+                        "Precioclose"= Datos[,5])
+SM <- SMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
+Z <- SMA(Historico[,2],n=100, wilder = FALSE, ratio = NULL)
+x_Ema <-EMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
+y <- BBands(Historico[,2], n=10, EMA, sd=2)
+
+Historico <- data.frame("Date"= Datos[,1],
+                        "Precioopen"= Datos[,2],
+                        "Preciohigh"= Datos[,3],
+                        "Preciolow"= Datos[,4],
+                        "Close"= Datos[,5],
+                        "SMA_10" = SM,
+                        "SMA_100" = Z,
+                        "EMA_10 " = x_Ema,
+                        "BBd"= y[,1],
+                        "BBu"=y[,3],
+                        "Mov_10" = 0,
+                        "Mov_100" = 0,
+                        "Mov_E" = 0)
+@
+
+
+%colores
+\selectcolormodel{cmyk}
+
+\definecolor{bostonuniversityred}{rgb}{0.8, 0.0, 0.0}
+\definecolor{darkgreen}{cmyk}{0.8,0,0.8,0.45}
+\definecolor{lightgreen}{cmyk}{0.8,0,0.8,0.25}
+\definecolor{brickred}{rgb}{0.8, 0.25, 0.33}
+
+
+<<Extra, include=FALSE, echo=FALSE, eval=TRUE>>=
+# library(xts)
+# data(sample_matrix)
+# m <- tail(sample_matrix, n = 32)
+# dygraph(m) %>%
+#   dyCandlestick()
+plot(rnorm(100,1,1), type="l")
+
+@
+% -- -------------------------------------------------------------------------------------------- %
+%	-- TITLE SECTION 
+% -- -------------------------------------------------------------------------------------------- %
+
+\title{\Huge An\'alisis de USD/MXN}
+\institute{\Large Instituto Tecnol\'ogico de Estudios Superiores de Occidente}
+
+% -- -------------------------------------------------------------------------------------------- %
+%	-- FOOTER TEXT
+% -- -------------------------------------------------------------------------------------------- %
+
+\newcommand{\leftfoot}{Official Web Page:}
+\newcommand{\rightfoot}{More Info: }
+
+% -- -------------------------------------------------------------------------------------------- %
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+\title{An\'alisis de USD/MXN}
+\begin{frame}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Informacion del Activo -- VELAS ------------------------------------------------------ -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.66 \linewidth}
+
+  \begin{block}{\small Precio de Cierre: } : 
+  \textit{Texto}
+
+    % \begin{figure}[H]
+    % \includegraphics[scale=1]{figure/G0_HistoricoPrecios-1.pdf}
+    % \end{figure}
+
+  \end{block}
+  
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 2 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.32 \linewidth}
+\begin{block}{\small Estad\'istica Precios (Velas) hist\'oricas}
+
+  %Tabla
+
+\end{block}
+\end{column}
+
+\end{columns}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Informacion del Activo -- Velas A ---------------------------------------------------- -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+
+  \begin{block}{\small {Price.Open - Price.Low}}
+
+    % \begin{figure}[H]
+    % \includegraphics[scale=1]{figure/G1A_HistoricoVelas-1.pdf}
+    % \end{figure}
+
+  \end{block}
+
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 2 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+
+  \begin{block}{\small {Price.High - Price.Open}}
+
+    % \begin{figure}[H]
+    % \includegraphics[scale=1]{figure/G1A_HistoricoVelas-2.pdf}
+    % \end{figure}
+
+  \end{block}
+  
+\end{column}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Informacion del Activo -- Velas B ---------------------------------------------------- -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+
+  \begin{block}{\small {Price.Close - Price.Open}}
+
+    % \begin{figure}[H]
+    % \includegraphics[scale=1]{figure/G1A_HistoricoVelas-3.pdf}
+    % \end{figure}
+
+  \end{block}
+  
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 2 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+
+  \begin{block}{\small {Price.High - Price.Low}}
+
+    % \begin{figure}[H]
+    % \includegraphics[scale=1]{figure/G1A_HistoricoVelas-4.pdf}
+    % \end{figure}
+
+  \end{block}
+  
+\end{column}
+
+
+\end{columns}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Informacion del Algoritmo ------------------------------------------------------------ -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.32 \linewidth}
+
+\begin{block}{\small Descripci\'on}
+\justify{Metodolg\'ia \textit{BoxJenkins} para series de tiempo}
+\end{block}
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 2 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.32 \linewidth}
+\begin{block}{\small Datos Entrada}
+\small
+\textbf{Par\'ametros de Entrada}
+
+% \begin{itemize}
+%   \item Tama\~no de Ventana de informaci\'on: 
+%   \item Noci\'on de par\'ametro info:
+%   \item L\'ogica de Aplicaci\'on de Algor\'itmo:
+%   \item Instrumento a Utilizar: 
+%   \item Periodicidad de precios:
+%   \item Valores de Exploraci\'on.
+%   \end{itemize}
+
+\end{block}
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 3 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.32 \linewidth}
+\begin{block}{\small Datos Salida}
+\small
+\textbf{Par\'ametros de Salida}
+
+\begin{itemize}
+  \item Predicci\'on del signo del rendimiento
+  \item Take Profit
+  \item Stop Loss
+\end{itemize}
+
+\end{block}
+\end{column}
+
+\end{columns}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Informacion del desempeno de Algoritmo ----------------------------------------------- -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.32 \linewidth}
+\begin{block}{\small Desempe\~no de los 4 mejores casos}
+
+
+\small
+\begin{itemize}
+  \item Criterio 1: Con mayor profit final acumulado.
+  \item Criterio 2: Con menor DrawDown registrado.
+  \item Criterio 3: Con menor registro de minusval\'ia general.
+  \item Criterio 4: Mayor Exito en Trading.
+\end{itemize}
+
+\end{block}
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 3 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.66 \linewidth}
+\begin{block}{\small Pips Acumulados para cada Variaci\'on de Par\'ametros}
+
+  % \begin{figure}[H]
+  %   \includegraphics[scale=1]{figure/G2_ProfitAcumulada-1.pdf}
+  % \end{figure}
+  
+\end{block}
+\end{column}
+
+\end{columns}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+% -- -- Perdedoras Consecutivas y Ganadoras Consecutivas ------------------------------------- -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+% \begin{column}{.24 \linewidth}
+% \begin{block}{\small Tabla Gc Vs Pc }
+% 
+%   % \small
+%   % \centering
+% 
+% \end{block}
+% \end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 2 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+\begin{block}{\small Tabla Gc Vs Pc }
+
+  % \small
+  % \centering
+
+\end{block}
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 3 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+\begin{block}{\small Tabla Gc Vs Pc }
+
+  % \small
+  % \centering
+
+\end{block}
+\end{column}
+
+% -- ------------------------------------------------------------------------------- Columna 4 -- %
+% -- ----------------------------------------------------------------------------------------- -- %
+
+\begin{column}{.24 \linewidth}
+\begin{block}{\small Tabla Gc Vs Pc }
+
+  % \small
+  % \centering
+
+\end{block}
+\end{column}
+
+\end{columns}
+\end{frame}
+
+\end{document}
