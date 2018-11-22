@@ -1,8 +1,15 @@
+
+% -- ----------------------------------------------------------------------------------------- -- #
+% -- Initial Developer: IF Francisco ME ------------------------------------------------------ -- #
+% -- GitHub Repossitory:  -------------------------------------------------------------------- -- #
+% -- License: GNU General Public License ----------------------------------------------------- -- #
+% -- ----------------------------------------------------------------------------------------- -- #
+
 \documentclass[final, xcolor=table]{beamer}
-%\usetheme{myst}
 \usepackage[orientation=portrait,size=a0,scale=1.4]{beamerposter}
+\usetheme{FichaTecnica}
 \usepackage{graphicx}
-\usepackage{booktabs  }
+\usepackage{booktabs}
 \usepackage[spanish]{babel}
 \usepackage{amsmath,amsthm,amssymb,latexsym}
 \usepackage{booktabs}
@@ -10,7 +17,6 @@
 \graphicspath{{figures/}}
 
 <<Ini, include=FALSE, echo=FALSE, eval=TRUE>>=
-
 # -- ----------------------------------------------------------------------------------------- -- #
 # -- Inicializador general de sistema ------------------------------------------------ ETAPA 0 -- #
 # -- ----------------------------------------------------------------------------------------- -- #
@@ -100,6 +106,54 @@ Historico <- data.frame("Date"= Datos[,1],
 
 @
 
+
+
+<<Candle, include=FALSE, echo=FALSE, eval=TRUE>>=
+X <- xts(Historico[,2:5],order.by= Historico[,1], frequency = NULL, unique = TRUE)
+is.xts(X)
+
+chartSeries(X[,1:4],type = c("candlesticks"), subset = NULL, name = "Candlestick", time.scale= NULL,log.scale = FALSE,
+           TA = 'addVo()',
+          TAsep=';',
+         line.type = "l",
+        bar.type = "ohlc",
+       theme = chartTheme("white"),
+      layout = NA,
+     major.ticks='auto', minor.ticks=TRUE,
+    yrange=NULL,
+   plot=TRUE,
+  color.vol = TRUE, multi.col = FALSE)
+candleChart(X[,1:4],subset = NULL, type = "candlesticks", show.grid = TRUE, theme = 'white')
+#add_BBands(n=20,maType="SMA",sd=2)
+@
+
+<<Graph, include=FALSE, echo=FALSE, eval=TRUE>>=
+chartSeries(X,
+            type = c("line"), 
+            subset = NULL,
+            show.grid = TRUE, 
+            name = "Precios",
+            time.scale = NULL,
+            log.scale = FALSE,
+            TA = 'addVo()',
+            TAsep=';',
+            line.type = "l",
+            bar.type = "ohlc",
+            theme = chartTheme("white"),
+            layout = NA,
+            major.ticks='auto', minor.ticks=TRUE,
+            yrange=NULL,
+            plot=TRUE)
+addSMA(n = 10, on = 1, with.col = Cl, overlay = TRUE, col = "brown")
+addSMA(n = 100, on = 1, with.col = Cl, overlay = TRUE, col = "orange")
+addEMA(n = 10, wilder = FALSE, ratio=NULL, on = 1,
+       with.col = Cl, overlay = TRUE, col = "blue")
+addBBands(n = 20, sd = 2, ma = "SMA", draw = 'bands', on = -1)
+
+@
+
+
+
 % -- -------------------------------------------------------------------------------------------- %
 %	-- TITLE SECTION 
 % -- -------------------------------------------------------------------------------------------- %
@@ -116,7 +170,6 @@ Historico <- data.frame("Date"= Datos[,1],
 
 % -- -------------------------------------------------------------------------------------------- %
 \begin{document}
-\SweaveOpts{concordance=TRUE}
 
 \title{Algoritmo Tipo de cambio USD/MXN}
 \begin{frame}
@@ -130,14 +183,15 @@ Historico <- data.frame("Date"= Datos[,1],
 % -- ------------------------------------------------------------------------------- Columna 1 -- %
 % -- ----------------------------------------------------------------------------------------- -- %
 
-\begin{column}{.66 \linewidth}
+\begin{column}{1 \linewidth}
 
   \begin{block}{\small Precio de Cierre: } : 
   \textit{Texto}
 
-    % \begin{figure}[H]
-    % \includegraphics[scale=1]{figure/G0_HistoricoPrecios-1.pdf}
-    % \end{figure}
+    \begin{figure}[H]
+     \includegraphics[scale=1]{figure/Candle-2.pdf}\hfill
+     \includegraphics[scale=1]{figure/Graph-5.pdf}\hfill
+     \end{figure}
 
   \end{block}
   
@@ -146,13 +200,13 @@ Historico <- data.frame("Date"= Datos[,1],
 % -- ------------------------------------------------------------------------------- Columna 2 -- %
 % -- ----------------------------------------------------------------------------------------- -- %
 
-\begin{column}{.32 \linewidth}
-\begin{block}{\small CandleStick}
+%\begin{column}{.32 \linewidth}[t]
+%\begin{block}{\small CandleStick}
 
 
 
-\end{block}
-\end{column}
+%\end{block}
+%\end{column}
 
 \end{columns}
 
@@ -354,4 +408,3 @@ Historico <- data.frame("Date"= Datos[,1],
 \end{frame}
 
 \end{document}
-
