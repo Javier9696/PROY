@@ -1,3 +1,4 @@
+
 % -- ----------------------------------------------------------------------------------------- -- #
 % -- Initial Developer: IF Francisco ME ------------------------------------------------------ -- #
 % -- GitHub Repossitory:  -------------------------------------------------------------------- -- #
@@ -567,13 +568,22 @@ as\'i como tambien la EMA de 10 d\'ias.
 % -- ------------------------------------------------------------------------------- Columna 1 -- %
 % -- ----------------------------------------------------------------------------------------- -- %
 
-\begin{column}{.5 \linewidth}
-\begin{block}{\small Ljung-Box }
+\begin{column}{.25 \linewidth}
+\begin{block}{\small Ljung-Box test }
 
+\begin{table}[htbp]
 
+\begin{tabular}{|l|l|}
+\hline
+Ventana  & P-Value \\
+\hline \hline
+0-150 d\'ias & \Sexpr{Box[1]} \\ \hline
+150-300 d\'ias & \Sexpr{Box[2]} \\ \hline
+301-500 d\'ias & \Sexpr{Box[3]} \\ \hline
+500 d\'ias & \Sexpr{Box[4]} \\ \hline
+\end{tabular}
 
-
-
+\end{table}
 
 \end{block}
 \end{column}
@@ -581,64 +591,53 @@ as\'i como tambien la EMA de 10 d\'ias.
 % -- ------------------------------------------------------------------------------- Columna 3 -- %
 % -- ----------------------------------------------------------------------------------------- -- %
 
-\begin{column}{.5 \linewidth}
-\begin{block}{\small Pips Acumulados para cada Variaci\'on de Par\'ametros}
+\begin{column}{.25 \linewidth}
+\begin{block}{\small Interpretaci\'on }
+La prueba indica autocorreaci\'on en la Serie de tiempo .\\
+Se busca tener un p-value < .05 para aceptar que no existe\\
+autocorrelaci\'on en el primer rezago de la serie. 
 
-  % \begin{figure}[H]
-  %   \includegraphics[scale=1]{figure/G2_ProfitAcumulada-1.pdf}
-  % \end{figure}
   
 \end{block}
 \end{column}
+\begin{column}{.25 \linewidth}
+\begin{block}{\small Kolmogorov-Smirnov test }
+\begin{table}[htbp]
+
+\begin{tabular}{|l|l|}
+\hline
+Ventana  & P-Value \\
+\hline \hline
+0-150 d\'ias & \Sexpr{norm[1]} \\ \hline
+150-300 d\'ias & \Sexpr{norm[2]} \\ \hline
+301-500 d\'ias & \Sexpr{norm[3]} \\ \hline
+500 d\'ias & \Sexpr{norm[4]} \\ \hline
+\end{tabular}
+
+\end{table}
+
+
+ 
+  
+\end{block}
+\end{column}
+\begin{column}{.25 \linewidth}
+\begin{block}{\small Interpretaci\'on }
+La prueba busca el ajuste  una distribuci\'on de probabilidad\\
+en este caso a la distribuci\'on normal.
+Se busca que se acepte la Hi\'potesis nula es decir que se ajusta la distribuci\'on\\
+de probabilidad.
+  
+\end{block}
+\end{column}
+
+
 
 \end{columns}
 
 % -- ----------------------------------------------------------------------------------------- -- %
 % -- -- Perdedoras Consecutivas y Ganadoras Consecutivas ------------------------------------- -- %
-% -- ----------------------------------------------------------------------------------------- -- %
 
-\begin{columns}[t]
-
-% -- ------------------------------------------------------------------------------- Columna 1 -- %
-% -- ----------------------------------------------------------------------------------------- -- %
-
-\begin{column}{.24 \linewidth}
-\begin{block}{\small Tabla Gc Vs Pc }
-
-
-\end{block}
-\end{column}
-
-% -- ------------------------------------------------------------------------------- Columna 2 -- %
-% -- ----------------------------------------------------------------------------------------- -- %
-
-\begin{column}{.24 \linewidth}
-\begin{block}{\small Tabla Gc Vs Pc }
-
-\end{block}
-\end{column}
-
-% -- ------------------------------------------------------------------------------- Columna 3 -- %
-% -- ----------------------------------------------------------------------------------------- -- %
-
-\begin{column}{.24 \linewidth}
-\begin{block}{\small Tabla Gc Vs Pc }
-
- 
-\end{block}
-\end{column}
-
-% -- ------------------------------------------------------------------------------- Columna 4 -- %
-% -- ----------------------------------------------------------------------------------------- -- %
-
-\begin{column}{.24 \linewidth}
-\begin{block}{\small Tabla Gc Vs Pc }
-
-\end{block}
-\end{column}
-
-\end{columns}
 \end{frame}
 
 \end{document}
-
