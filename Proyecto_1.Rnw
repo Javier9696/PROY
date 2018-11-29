@@ -612,7 +612,7 @@ norm[4] <- ks.test(ven_500, "pnorm", 1, 2)$p.value
   \begin{column}{.25 \linewidth}
   \begin{block}{\small Interpretaci\'on }
   La prueba indica autocorreaci\'on en la Serie de tiempo .\\
-  Se busca tener un p-value < .05 para aceptar que no existe\\
+  Se busca tener un p-value $<$ .05 para aceptar que no existe\\
   autocorrelaci\'on en el primer rezago de la serie. 
   
   
@@ -633,11 +633,7 @@ norm[4] <- ks.test(ven_500, "pnorm", 1, 2)$p.value
   \end{tabular}
   
   \end{table}
-  
-  
-  
-  
-  \end{block}
+   \end{block}
   \end{column}
   \begin{column}{.25 \linewidth}
   \begin{block}{\small Interpretaci\'on }
