@@ -1,0 +1,661 @@
+% -- ----------------------------------------------------------------------------------------- -- #
+  % -- Initial Developer: IF Francisco ME ------------------------------------------------------ -- #
+  % -- GitHub Repossitory:  -------------------------------------------------------------------- -- #
+  % -- License: GNU General Public License ----------------------------------------------------- -- #
+  % -- ----------------------------------------------------------------------------------------- -- #
+  
+  \documentclass[final, xcolor=table]{beamer}
+\usepackage[orientation=portrait,size=a0,scale=1.4]{beamerposter}
+\usetheme{FichaTecnica}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amsthm,amssymb,latexsym}
+\usepackage{booktabs}
+\usepackage{enumerate} 
+
+\usepackage{wrapfig} 
+\usepackage{ragged2e}
+\graphicspath{{figures/}}
+
+<<Ini, include=FALSE, echo=FALSE, eval=TRUE>>=
+  # -- ----------------------------------------------------------------------------------------- -- #
+  # -- Inicializador general de sistema ------------------------------------------------ ETAPA 0 -- #
+  # -- ----------------------------------------------------------------------------------------- -- #
+  rm(list=ls())
+mdir <- getwd()
+
+# -- Establecer el sistema de medicion de la computadora
+Sys.setlocale(category = "LC_ALL", locale = "")
+
+# -- Huso horario
+Sys.setenv(tz="America/Monterrey", TZ="America/Monterrey")
+options(tz="America/Monterrey", TZ="America/Monterrey")
+
+# -- Cargar y/o instalar en automatico paquetes a utilizar -- #
+
+pkg <- c("base","downloader","dplyr","fBasics","forecast","grid",
+         "gridExtra","httr","jsonlite","lmtest","lubridate","moments",
+         "matrixStats", "PerformanceAnalytics","plyr","quantmod",
+         "reshape2","RCurl","RMySQL", "stats","scales","tseries","stats",
+         "TTR","TSA","XML","xts","zoo")
+
+inst <- pkg %in% installed.packages()
+if(length(pkg[!inst]) > 0) install.packages(pkg[!inst])
+instpackages <- lapply(pkg, library, character.only=TRUE)
+
+# -- Cargar archivos desde GitHub -- #
+
+RawGitHub <- "https://raw.githubusercontent.com/IFFranciscoME/"
+ROandaAPI <- paste(RawGitHub,"ROandaAPI/master/ROandaAPI.R",sep="")
+downloader::source_url(ROandaAPI,prompt=FALSE,quiet=TRUE)
+
+# -- Parametros para usar API-OANDA
+
+# Tipo de cuenta practice/live
+OA_At <- "practice"
+# ID de cuenta
+OA_Ai <- 1742531
+# Token para llamadas a API
+OA_Ak <- "ada4a61b0d5bc0e5939365e01450b614-4121f84f01ad78942c46fc3ac777baa6" 
+# Hora a la que se considera "Fin del dia"
+OA_Da <- 17
+# Uso horario
+OA_Ta <- "America/Mexico_City"
+# Instrumento
+OA_In <- "USD_MXN"
+# Granularidad o periodicidad de los precios H4 = Cada 4 horas
+OA_Pr <- "H4"
+# Multiplicador de precios para convertir a PIPS
+MultPip_MT1 <- 10000
+
+Precios_Oanda <- HisPrices(AccountType = OA_At, Granularity = OA_Pr,
+                           DayAlign = OA_Da, TimeAlign = OA_Ta, Token = OA_Ak,
+                           Instrument = OA_In, 
+                           Start = NULL, End = NULL, Count = 500)
+suppressMessages(library(plotly)) # Graficas interactivas
+suppressMessages(library(quantmod)) # Graficas interactivas
+Datos <- list()
+Datos <- Precios_Oanda
+suppressMessages(library(TTR)) # ANALISIS TEC
+Datos$TimeStamp <- as.character(Datos$TimeStamp)
+
+
+Datos$TimeStamp <- as.Date(Datos$TimeStamp)
+Historico <- data.frame("Date"= Datos[,1],
+                        "Precioopen"= Datos[,2],
+                        "Preciohigh"= Datos[,3],
+                        "Preciolow"= Datos[,4],
+                        "Precioclose"= Datos[,5])
+SM <- SMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
+Z <- SMA(Historico[,2],n=100, wilder = FALSE, ratio = NULL)
+x_Ema <-EMA(Historico[,2],n=10, wilder = FALSE, ratio = NULL)
+y <- BBands(Historico[,2], n=10, EMA, sd=2)
+
+Historico <- data.frame("Date"= Datos[,1],
+                        "Precioopen"= Datos[,2],
+                        "Preciohigh"= Datos[,3],
+                        "Preciolow"= Datos[,4],
+                        "Close"= Datos[,5],
+                        "SMA_10" = SM,
+                        "SMA_100" = Z,
+                        "EMA_10 " = x_Ema,
+                        "BBd"= y[,1],
+                        "BBu"=y[,3],
+                        "Mov_10" = 0,
+                        "Mov_100" = 0,
+                        "Mov_E" = 0)
+
+@
+  
+  
+  
+  <<Candle, include=FALSE, echo=FALSE, eval=TRUE>>=
+  X <- xts(Historico[,2:5],order.by= Historico[,1], frequency = NULL, unique = TRUE)
+is.xts(X)
+  s <- xts(Historico[303:500,2:5],order.by= Historico[303:500,1], frequency = NULL, unique = TRUE)
+is.xts(X)
+
+chartSeries(X[,1:4],type = c("candlesticks"), subset = NULL, name = "Candlestick", time.scale= NULL,log.scale = FALSE,
+            TA = 'addVo()',
+            TAsep=';',
+            line.type = "l",
+            bar.type = "ohlc",
+            theme = chartTheme("white"),
+            layout = NA,
+            major.ticks='auto', minor.ticks=TRUE,
+            yrange=NULL,
+            plot=TRUE,
+            color.vol = TRUE, multi.col = FALSE)
+candleChart(X[,1:4],name = "CandleSticks",subset = NULL, type = "candlesticks", show.grid = TRUE, theme = 'white')
+#add_BBands(n=20,maType="SMA",sd=2)
+
+aux <-data.frame("Date" = Datos[,1],
+                 "Precio_Apertura" = Datos$Open,
+                 "Precio_Cierre" = Datos$Close,
+                 "Bull_Bear" = NA , 
+                 "Amplitud" = 0,
+                 "Pattern" = NA,
+                 "Number" = 0)
+#numbers
+#bearish enfulfing 1
+#bullish enfulfing 2
+# bearish Harami 3
+# bullish Harami 4
+
+
+aux$Bull_Bear[1] <- "Bull"
+aux$Amplitud[1] <- abs(aux$Precio_Cierre[1] - aux$Precio_Apertura[1])
+
+
+for (i in 2:length(Datos$Open)){
+  #condicion 1
+  if(aux$Precio_Apertura[i] > aux$Precio_Cierre[i]){
+    aux$Bull_Bear[i] <- "Bear"
+    aux$Amplitud[i] <- abs(aux$Precio_Cierre[i] - aux$Precio_Apertura[i])
+    
+  } else {
+    aux$Bull_Bear[i] <- "Bull"
+    aux$Amplitud[i] <- abs(aux$Precio_Cierre[i] - aux$Precio_Apertura[i])
+    
+  } #fin if
+  #condicion 2
+  if( aux$Amplitud[i-1] < aux$Amplitud[i]){
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bear") {
+      aux$Pattern[i] <- "Bearish Engulfing" 
+      aux$Number[i]<-1
+      
+    }
+    else if (aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull"){
+      aux$Pattern[i] <- "Bullish Engulfing"
+      aux$Number[i] <- 2
+    }
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bull") {
+      aux$Pattern[i] <- "Bullish"
+      aux$Number[i] <- 2
+      
+    }
+    else if (aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bear"){
+      aux$Pattern[i] <- "Bearish"
+      aux$Number[i]<-1
+    }
+  }
+  
+  else if(aux$Amplitud[i-1] > aux$Amplitud[i]){
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bear") {
+      aux$Pattern[i] <- "Bearish Harami"
+      aux$Number[i]<-3
+      
+    }
+    else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull") {
+      #else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bull")  {
+      aux$Pattern[i] <- "Bullish Harami" 
+      aux$Number[i] <- 4
+    }
+    if (aux$Bull_Bear[i-1] == "Bull" & aux$Bull_Bear[i] == "Bull") {
+      aux$Pattern[i] <- "Bullish"
+      aux$Number[i] <- 4
+      
+    }
+    else if(aux$Bull_Bear[i-1] == "Bear" & aux$Bull_Bear[i] == "Bear") {
+      
+      aux$Pattern[i] <- "Bearish"
+      aux$Number[i]<-3
+    }
+    
+  }
+  
+}  # fin for
+bearish_egulfing <- length(which(aux$Number == 1))
+bullish_egulfing <- length(which(aux$Number == 2))
+bearish_harami <- length(which(aux$Number == 3))
+bullish_harami <- length(which(aux$Number == 4))
+hist(aux$Number,
+     main="Frecuencia de Patrones en CandleStick",
+     xlab="Patrones: 1.-Bearish Egulfing, 2.-Bullish Egulfing, 3.-Bearish Harami, 4.-Bullish Harami",
+     col="darkmagenta",
+     freq=TRUE
+)
+
+
+
+@
+  
+  <<Prices, include=FALSE, echo=FALSE, eval=TRUE>>=
+  chartSeries(X,
+              type = c("line"), 
+              subset = NULL,
+              show.grid = TRUE, 
+              name = "Precios",
+              time.scale = NULL,
+              log.scale = FALSE,
+              TA = 'addVo()',
+              TAsep=';',
+              line.type = "l",
+              bar.type = "ohlc",
+              theme = chartTheme("white"),
+              layout = NA,
+              major.ticks='auto', minor.ticks=TRUE,
+              yrange=NULL,
+              plot=TRUE)
+addSMA(n = 10, on = 1, with.col = Cl, overlay = TRUE, col = "brown")
+addSMA(n = 100, on = 1, with.col = Cl, overlay = TRUE, col = "orange")
+addEMA(n = 10, wilder = FALSE, ratio=NULL, on = 1,
+       with.col = Cl, overlay = TRUE, col = "blue")
+#Analisis de los estadisticos
+for ( i in 10:length(Historico$Date)){
+  
+  if (Historico$Close[i] > Historico$SMA_10[i]){
+    Historico$Mov_10[i]<-1 #compra    
+    
+  }#fin primer if 
+  else if (Historico$Close[i] < Historico$SMA_10[i]){
+    Historico$Mov_10[i] <-2   
+    
+  } else
+  { Historico$Mov_10[i]<-0
+  
+  }
+  #mantiene
+  if (Historico$Close[i] > Historico$EMA_10[i]){
+    Historico$Mov_E[i]<-1 #compra    
+    
+  }#fin primer if 
+  else if (Historico$Close[i] < Historico$EMA_10[i]){
+    Historico$Mov_E[i] <-2   
+    
+  } else
+  { Historico$Mov_E[i]<-0
+  
+  }
+  
+}
+#evaluacion MA 100
+for ( i in 100:length(Historico$Date)){
+  
+  if (Historico$Close[i] > Historico$SMA_100[i]){
+    Historico$Mov_100[i]<-1 #compra    
+    
+  }#fin primer if 
+  else if (Historico$Close[i] < Historico$SMA_100[i]){
+    Historico$Mov_100[i] <-2    
+  } else
+  { Historico$Mov_100[i]<-0} #mantiene
+  
+}
+
+#MA 10
+hist(Historico$Mov_10,
+     main="Frecuencia de Movimientos contra SMA de 10",
+     xlab="Patrones:  0.- Mantiene, 1.-Compra, 2.-Venta",
+     col="Gray",
+     freq=FALSE
+)
+
+#MA 100
+hist(Historico$Mov_100,
+     main="Frecuencia de Movimientos contra SMA de 100",
+     xlab="Patrones:  0.- Mantiene, 1.-Compra, 2.-Venta",
+     col="Blue",
+     freq=FALSE
+)
+#EMA
+hist(Historico$Mov_E,
+     main="Frecuencia de Movimientos contra EMA de 100",
+     xlab="Patrones:  0.- Mantiene, 1.-Compra, 2.-Venta",
+     col="Purple",
+     freq=FALSE
+)
+
+
+
+@
+  
+  <<Bollinger, include=FALSE, echo=FALSE, eval=TRUE>>=
+  chartSeries(X,
+              type = c("line"), 
+              subset = NULL,
+              show.grid = TRUE, 
+              name = "Precios",
+              time.scale = NULL,
+              log.scale = FALSE,
+              TA = 'addVo()',
+              TAsep=';',
+              line.type = "l",
+              bar.type = "ohlc",
+              theme = chartTheme("white"),
+              layout = NA,
+              major.ticks='auto', minor.ticks=TRUE,
+              yrange=NULL,
+              plot=TRUE)
+addBBands(n = 20, sd = 2, ma = "SMA", draw = 'bands', on = -1)
+
+compra <- 0
+venta <- 0
+mantiene <- 0
+for (i in 10:length(Historico$Date)){
+  
+  if(Historico$Close[i]< Historico$BBd[i]){
+    compra<- compra +1
+  }
+  else if (Historico$Close[i]> Historico$BBu[i]){
+    venta <- venta +1
+  }
+  else{
+    mantiene <- mantiene + 1
+  }
+  
+  
+} # fin for
+
+
+
+@
+  
+  <<MACD, include=FALSE, echo=FALSE, eval=TRUE>>=
+  chartSeries(s,
+              type = c("line"), 
+              subset = NULL,
+              show.grid = TRUE, 
+              name = "Precios",
+              time.scale = NULL,
+              log.scale = FALSE,
+              TA = 'addVo()',
+              TAsep=';',
+              line.type = "l",
+              bar.type = "ohlc",
+              theme = chartTheme("white"),
+              layout = NA,
+              major.ticks='auto', minor.ticks=TRUE,
+              yrange=NULL,
+              plot=TRUE)
+addMACD(fast = 10, slow = 28, signal = 9, type = "SMA")
+@
+  
+  <<P_Est, include=FALSE, echo=FALSE, eval=TRUE>>=
+  #----------------------------------BOX Jenkins
+  ven_500 <- Historico$Close #todos  los valores 
+ven_150 <- Historico$Close[1:150] #primeros 150 valores
+ven_300 <- Historico$Close[151:300]
+ven_301 <- Historico$Close[301:500]
+
+
+Box <- c()
+Box[1]<- Box.test(ven_150, lag = 1, type = "Box-Pierce")$p.value
+Box[2]<- Box.test(ven_300, lag = 1, type = "Box-Pierce")$p.value
+Box[3]<- Box.test(ven_301, lag = 1, type = "Box-Pierce")$p.value
+Box[4]<- Box.test(ven_500, lag = 1, type = "Box-Pierce")$p.value
+
+
+#-----------------------------------Normalidad
+norm <- c()
+norm[1] <- ks.test(ven_150, "pnorm", 1, 2)$p.value
+norm[2] <- ks.test(ven_300, "pnorm", 1, 2)$p.value
+norm[3] <- ks.test(ven_301, "pnorm", 1, 2)$p.value
+norm[4] <- ks.test(ven_500, "pnorm", 1, 2)$p.value
+@
+  % -- -------------------------------------------------------------------------------------------- %
+  %	-- TITLE SECTION 
+% -- -------------------------------------------------------------------------------------------- %
+  
+  \title{\Huge Proyecto Tradding}
+\institute{\Large ITESO}
+
+% -- -------------------------------------------------------------------------------------------- %
+  %	-- FOOTER TEXT
+% -- -------------------------------------------------------------------------------------------- %
+  
+  \newcommand{\leftfoot}{Official Web Page:}
+\newcommand{\rightfoot}{More Info: }
+
+% -- -------------------------------------------------------------------------------------------- %
+  \begin{document}
+
+\title{Algoritmo Tipo de cambio USD/MXN}
+\begin{frame}
+
+% -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Informacion del Activo -- VELAS ------------------------------------------------------ -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{columns}[t]
+
+% -- ------------------------------------------------------------------------------- Columna 1 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.34 \linewidth}
+
+\begin{block}{\small Precios: }  
+%\textit{Texto}
+
+\begin{figure}[H]\centering
+%\includegraphics[scale=1]{figure/Candle-2.pdf}\hfill
+\includegraphics[scale=1.1]{figure/Prices-4.pdf}\hfill
+\end{figure}
+
+\end{block}
+
+\end{column}
+
+\begin{column}{.66 \linewidth}
+\begin{block}{\small Interpretaci\'on }  
+  En la gr\'afica se incluye la SMA de 10 y de 100 d\'ias,\\
+  as\'i como tambien la EMA de 10 d\'ias.
+  \begin{table}[H]
+  \centering
+  \begin{tabular}{l c r}
+  \hline
+  \includegraphics[scale=1]{figure/Prices-5.pdf} & \includegraphics[scale=1]{figure/Prices-6.pdf} & \includegraphics[scale=1]{figure/Prices-7.pdf} \\
+  \hline
+  \end{tabular}
+  \end{table}
+  \end{block}
+  \end{column}
+  \end{columns}
+  % -- ------------------------------------------------------------------------------- Columna 2 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  % -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Informacion del Activo -- Velas A ---------------------------------------------------- -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{columns}[t]
+  
+  % -- ------------------------------------------------------------------------------- Columna 1 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.33 \linewidth}
+  
+  \begin{block}{\small {CandleSticks}}
+  
+  \includegraphics[scale=1.1]{figure/Candle-2.pdf}\hfill
+  
+  \end{block}
+  
+  \end{column}
+  
+  % -- ------------------------------------------------------------------------------- Columna 2 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.33 \linewidth}
+  
+  \begin{block}{\small {Interpretaci\'on}}
+  Se  hizo un an\'alisis del gr\'afico de velas,\\
+  buscando  que se formaran los siguientes patrones.
+  \begin{itemize}
+  \item Bearish Engulfing.
+  \item Bullish Engulfing.
+  \item Bearish Harami.
+  \item Bullish Harami.
+  \end{itemize}
+  
+  \end{block}
+  
+  \end{column}
+  
+  % -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Informacion del Activo -- Velas B ---------------------------------------------------- -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  % -- ------------------------------------------------------------------------------- Columna 1 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.33 \linewidth}
+  
+  
+  \begin{block}{\small {Histograma Patrones}}
+  Frecuencias presentadas en los precios.
+  
+  \includegraphics[scale=1.1]{figure/Candle-3.pdf}
+  \end{block}
+  
+  \end{column}
+  \end{columns}
+  % -- ------------------------------------------------------------------------------- Columna 2 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  
+  
+  % -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Informacion del Algoritmo ------------------------------------------------------------ -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{columns}[t]
+  
+  % -- ------------------------------------------------------------------------------- Columna 1 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.3 \linewidth}
+  \begin{block}{\small MACD }
+  
+  
+  
+  \includegraphics[scale=1.1]{figure/MACD-2.pdf}
+  
+  
+  
+  
+  \end{block}
+  \end{column}
+  
+  \begin{column}{.2 \linewidth}
+  
+  \begin{block}{\small {Interpretaci\'on}}
+  Tomando un periodo de tiempo de un mes\\
+  existe una tendencia alcista entre el inicio\\
+  de la gr\'afica y el final del periodo, sin embargo,\\
+  El MACD muestra una divergencia negativa,\\
+  donde eventualmente la acci\'on tendr\'a un movimiento a la baja.
+  \end{block}
+  
+  \end{column}
+  
+  % -- ------------------------------------------------------------------------------- Columna 2 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.5 \linewidth}
+  \begin{block}{\small Bollinger Bands}
+  
+  \begin{wrapfigure}{l}{0.6\linewidth}
+  
+  \includegraphics[scale=1.1]{figure/Bollinger-2.pdf}
+  %\caption{Una imagen}
+  %\label{fig:myfig}
+  \end{wrapfigure}
+  
+  
+  Las se\~{n}ales presentadas fueron las siguientes:\\
+  \textbf{Compra:} \Sexpr{compra}/500\\ % no se como imprimir el valor de la variable 
+  \textbf{Venta:} \Sexpr{venta}/500\\
+  \textbf{Mantiene:} \Sexpr{mantiene}//500\\
+  \end{block}
+  \end{column}
+  \end{columns}
+  % -- ------------------------------------------------------------------------------- Columna 3 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  
+  
+  
+  % -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Informacion del desempeno de Algoritmo ----------------------------------------------- -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{columns}[t]
+  
+  % -- ------------------------------------------------------------------------------- Columna 1 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.25 \linewidth}
+  \begin{block}{\small Ljung-Box test }
+  
+  \begin{table}[htbp]
+  
+  \begin{tabular}{|l|l|}
+  \hline
+  Ventana  & P-Value \\
+  \hline \hline
+  0-150 d\'ias & \Sexpr{Box[1]} \\ \hline
+  150-300 d\'ias & \Sexpr{Box[2]} \\ \hline
+  301-500 d\'ias & \Sexpr{Box[3]} \\ \hline
+  500 d\'ias & \Sexpr{Box[4]} \\ \hline
+  \end{tabular}
+  
+  \end{table}
+  
+  \end{block}
+  \end{column}
+  
+  % -- ------------------------------------------------------------------------------- Columna 3 -- %
+  % -- ----------------------------------------------------------------------------------------- -- %
+  
+  \begin{column}{.25 \linewidth}
+  \begin{block}{\small Interpretaci\'on }
+  La prueba indica autocorreaci\'on en la Serie de tiempo .\\
+  Se busca tener un p-value < .05 para aceptar que no existe\\
+  autocorrelaci\'on en el primer rezago de la serie. 
+  
+  
+  \end{block}
+  \end{column}
+  \begin{column}{.25 \linewidth}
+  \begin{block}{\small Kolmogorov-Smirnov test }
+  \begin{table}[htbp]
+  
+  \begin{tabular}{|l|l|}
+  \hline
+  Ventana  & P-Value \\
+  \hline \hline
+  0-150 d\'ias & \Sexpr{norm[1]} \\ \hline
+  150-300 d\'ias & \Sexpr{norm[2]} \\ \hline
+  301-500 d\'ias & \Sexpr{norm[3]} \\ \hline
+  500 d\'ias & \Sexpr{norm[4]} \\ \hline
+  \end{tabular}
+  
+  \end{table}
+  
+  
+  
+  
+  \end{block}
+  \end{column}
+  \begin{column}{.25 \linewidth}
+  \begin{block}{\small Interpretaci\'on }
+  La prueba busca el ajuste  una distribuci\'on de probabilidad\\
+  en este caso a la distribuci\'on normal.
+  Se busca que se acepte la Hi\'potesis nula es decir que se ajusta la distribuci\'on\\
+  de probabilidad.
+  
+  \end{block}
+  \end{column}
+  
+  
+  
+  \end{columns}
+  
+  % -- ----------------------------------------------------------------------------------------- -- %
+  % -- -- Perdedoras Consecutivas y Ganadoras Consecutivas ------------------------------------- -- %
+  
+  \end{frame}
+  
+  \end{document}
