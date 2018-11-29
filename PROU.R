@@ -90,6 +90,10 @@ Historico <- data.frame("Date"= Datos[,1],
 X <- xts(Historico[,2:5],order.by= Historico[,1], frequency = NULL, unique = TRUE)
 is.xts(X)
 
+s <- xts(Historico[303:500,2:5],order.by= Historico[303:500,1], frequency = NULL, unique = TRUE)
+is.xts(X)
+
+
 chartSeries(X[,1:4],type = c("candlesticks"), subset = NULL, name = "Candlestick", time.scale= NULL,log.scale = FALSE,
            TA = 'addVo()',
           TAsep=';',
@@ -343,4 +347,3 @@ norm[1] <- ks.test(ven_150, "pnorm", 1, 2)$p.value
 norm[2] <- ks.test(ven_300, "pnorm", 1, 2)$p.value
 norm[3] <- ks.test(ven_301, "pnorm", 1, 2)$p.value
 norm[4] <- ks.test(ven_500, "pnorm", 1, 2)$p.value
-
